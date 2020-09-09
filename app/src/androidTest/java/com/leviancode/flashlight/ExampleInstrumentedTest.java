@@ -1,4 +1,4 @@
-package com.leviancode.storm;
+package com.leviancode.flashlight;
 
 import android.content.Context;
 
@@ -22,6 +22,6 @@ public class ExampleInstrumentedTest {
         // MainActivity of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
 
-        assertEquals("com.leviancode.storm", appContext.getPackageName());
+        assertEquals("com.leviancode.flashlight", appContext.getPackageName());
     }
 }

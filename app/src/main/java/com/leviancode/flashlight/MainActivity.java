@@ -1,4 +1,4 @@
-package com.leviancode.storm;
+package com.leviancode.flashlight;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Bundle;

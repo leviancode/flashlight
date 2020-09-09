@@ -1,4 +1,4 @@
-package com.leviancode.storm;
+package com.leviancode.flashlight;
 
 import android.content.Context;
 import android.hardware.camera2.CameraAccessException;

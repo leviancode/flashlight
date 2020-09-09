@@ -1,4 +1,4 @@
-package com.leviancode.storm;
+package com.leviancode.flashlight;
 
 import org.junit.Test;
 
