@@ -1,18 +1,12 @@
 package com.leviancode.storm;
 import android.Manifest;
-import android.content.Context;
 import android.content.pm.PackageManager;
-import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.leviancode.storm.listeners.SeekBarListener;
-import com.leviancode.storm.listeners.TurnOnButtonListener;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -21,30 +15,22 @@ import androidx.core.content.ContextCompat;
 
 
 public class MainActivity extends AppCompatActivity {
-
-    private ImageButton turnOnImageButton;
+    private ImageButton flashOnImgButton;
     private SeekBar seekBar;
     private TextView freqTextView;
     private final int CAMERA_REQUEST_CODE = 2;
     private FlashLight flashLight;
 
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-
         freqTextView = findViewById(R.id.freqTextView);
-        turnOnImageButton = findViewById(R.id.turnOnImageButton);
+        flashOnImgButton = findViewById(R.id.flashButton);
         seekBar = findViewById(R.id.seekBar);
+        seekBar.setOnSeekBarChangeListener(new SeekBarListener());
 
         askPermission(Manifest.permission.CAMERA,CAMERA_REQUEST_CODE);
-        flashLight = new FlashLight(this);
-
-        turnOnImageButton.setOnClickListener(new TurnOnButtonListener(this));
-        seekBar.setOnSeekBarChangeListener(new SeekBarListener(this));
-
     }
 
 
@@ -62,24 +48,37 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Camera Permission Granted", Toast.LENGTH_LONG).show();
             } else {
                 Toast.makeText(this, "Camera Permission Denied", Toast.LENGTH_LONG).show();
-                turnOnImageButton.setEnabled(false);
+                flashOnImgButton.setEnabled(false);
             }
         }
     }
 
-    public ImageButton getTurnOnImageButton() {
-        return turnOnImageButton;
+    public void onFlashButtonClicked(View view) {
+        if(flashLight == null){
+            flashLight = new FlashLight(this);
+        }
+        if (flashLight.isFlashOn()){
+            flashOnImgButton.setImageResource(R.drawable.switch_off);
+        }else{
+            flashOnImgButton.setImageResource(R.drawable.switch_on);
+        }
+        flashLight.turnOnOff();
     }
 
-    public SeekBar getSeekBar() {
-        return seekBar;
-    }
+    class SeekBarListener implements SeekBar.OnSeekBarChangeListener {
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+        }
 
-    public TextView getFreqTextView() {
-        return freqTextView;
-    }
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+        }
 
-    public FlashLight getFlashLight() {
-        return flashLight;
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+            int freq = seekBar.getProgress();
+            freqTextView.setText(String.valueOf(freq));
+            flashLight.setFreq(freq);
+        }
     }
 }

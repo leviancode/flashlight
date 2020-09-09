@@ -3,6 +3,7 @@ package com.leviancode.storm;
 import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
+import android.widget.Toast;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -13,7 +14,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FlashLight {
-    private MainActivity mainActivity;
+    private Context context;
     private CameraManager cameraManager;
     private AtomicBoolean isFlashOn = new AtomicBoolean(false);
     private String cameraId;
@@ -21,24 +22,24 @@ public class FlashLight {
     private Lock lock = new ReentrantLock();
     private Condition strobeCondition = lock.newCondition();
 
-    public FlashLight(MainActivity mainActivity) {
-        this.mainActivity = mainActivity;
+    public FlashLight(MainActivity context) {
+        this.context = context;
         setup();
     }
 
     private void setup(){
-        cameraManager = (CameraManager) mainActivity.getSystemService(Context.CAMERA_SERVICE);
+        cameraManager = (CameraManager) context.getSystemService(android.content.Context.CAMERA_SERVICE);
         try {
             cameraId = cameraManager.getCameraIdList()[0];
-        } catch (CameraAccessException e) {}
+        } catch (CameraAccessException e) {
+            Toast.makeText(context, "Failed to access camera", Toast.LENGTH_LONG).show();
+        }
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         executorService.submit(new StrobeRunner());
     }
 
     public void turnOnOff() {
-
         try {
-            changeButtonImg();
             cameraManager.setTorchMode(cameraId, !isFlashOn.getAndSet(!isFlashOn.get()));
             if (isStrobeOn()){
                 lock.lock();
@@ -49,14 +50,8 @@ public class FlashLight {
                 }
             }
         } catch (CameraAccessException e) {
+            Toast.makeText(context, "Failed to access camera", Toast.LENGTH_LONG).show();
         }
-    }
-
-    private void changeButtonImg(){
-        if (isFlashOn.get())
-            mainActivity.getTurnOnImageButton().setImageResource(R.drawable.button_off);
-        else
-            mainActivity.getTurnOnImageButton().setImageResource(R.drawable.button_on);
     }
 
     private boolean isStrobeOn() {
@@ -79,6 +74,10 @@ public class FlashLight {
         return strobeCondition;
     }
 
+    public boolean isFlashOn() {
+        return isFlashOn.get();
+    }
+
     private class StrobeRunner implements Runnable{
 
         @Override
@@ -87,7 +86,6 @@ public class FlashLight {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     if (isStrobeOn()) {
-
                         Thread.sleep(10000 / freq.get());
                         cameraManager.setTorchMode(cameraId, flag);
                         flag = !flag;
