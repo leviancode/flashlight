@@ -1,2 +1,2 @@
-# flashlight
-My first Android App
+# Flashlight
+My first Android App - Flashlight with strobe effect
