@@ -3,8 +3,10 @@ package com.leviancode.flashlight;
 import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
+import android.util.Log;
 import android.widget.Toast;
 
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -14,24 +16,19 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FlashLight {
-    private Context context;
-    private CameraManager cameraManager;
-    private AtomicBoolean isFlashOn = new AtomicBoolean(false);
-    private String cameraId;
-    private AtomicInteger freq = new AtomicInteger(0);
-    private Lock lock = new ReentrantLock();
-    private Condition strobeCondition = lock.newCondition();
+    private String mCameraId;
+    private CameraManager mCameraManager;
+    private AtomicBoolean mIsFlashOn = new AtomicBoolean(false);
+    private AtomicInteger mFreq = new AtomicInteger(0);
+    private Lock mLock = new ReentrantLock();
+    private Condition mStrobeCondition = mLock.newCondition();
 
-    public FlashLight(MainActivity context) {
-        this.context = context;
-        setup();
-    }
-
-    private void setup(){
-        cameraManager = (CameraManager) context.getSystemService(android.content.Context.CAMERA_SERVICE);
+    public FlashLight(Context context) {
+        mCameraManager = (CameraManager) context.getSystemService(android.content.Context.CAMERA_SERVICE);
         try {
-            cameraId = cameraManager.getCameraIdList()[0];
+            mCameraId = mCameraManager.getCameraIdList()[0];
         } catch (CameraAccessException e) {
+            Log.e("MainActivity", "CameraAccessException", e);
             Toast.makeText(context, "Failed to access camera", Toast.LENGTH_LONG).show();
         }
         ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -40,42 +37,38 @@ public class FlashLight {
 
     public void turnOnOff() {
         try {
-            cameraManager.setTorchMode(cameraId, !isFlashOn.getAndSet(!isFlashOn.get()));
+            mCameraManager.setTorchMode(mCameraId, !mIsFlashOn.getAndSet(!mIsFlashOn.get()));
             if (isStrobeOn()){
-                lock.lock();
+                mLock.lock();
                 try{
-                    strobeCondition.signal();
+                    mStrobeCondition.signal();
                 }finally {
-                    lock.unlock();
+                    mLock.unlock();
                 }
             }
         } catch (CameraAccessException e) {
-            Toast.makeText(context, "Failed to access camera", Toast.LENGTH_LONG).show();
+            Log.e("Flashlight", "CameraAccessException", e);
         }
     }
 
     private boolean isStrobeOn() {
-        return freq.get() > 0 && isFlashOn.get();
+        return mFreq.get() > 0 && mIsFlashOn.get();
     }
 
     public void setFreq(int freq) {
-        this.freq.set(freq);
+        this.mFreq.set(freq);
         if (freq>0){
-            lock.lock();
+            mLock.lock();
             try{
-                strobeCondition.signal();
+                mStrobeCondition.signal();
             }finally {
-                lock.unlock();
+                mLock.unlock();
             }
         }
     }
 
-    public Condition getStrobeCondition() {
-        return strobeCondition;
-    }
-
     public boolean isFlashOn() {
-        return isFlashOn.get();
+        return mIsFlashOn.get();
     }
 
     private class StrobeRunner implements Runnable{
@@ -86,20 +79,20 @@ public class FlashLight {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     if (isStrobeOn()) {
-                        Thread.sleep(10000 / freq.get());
-                        cameraManager.setTorchMode(cameraId, flag);
+                        Thread.sleep(10000 / mFreq.get());
+                        mCameraManager.setTorchMode(mCameraId, flag);
                         flag = !flag;
-
                     } else {
-                        cameraManager.setTorchMode(cameraId, isFlashOn.get());
-                        lock.lock();
+                        mCameraManager.setTorchMode(mCameraId, mIsFlashOn.get());
+                        mLock.lock();
                         try {
-                            strobeCondition.await();
+                            mStrobeCondition.await();
                         } finally {
-                            lock.unlock();
+                            mLock.unlock();
                         }
                     }
                 } catch (InterruptedException | CameraAccessException e) {
+                    Log.e("Flashlight", Objects.requireNonNull(e.getMessage()));
                 }
             }
         }
